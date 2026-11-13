@@ -1,0 +1,978 @@
+# MASTER GAME DEVELOPMENT PROMPT
+# PROJECT: NO ESCAPE
+## A 100-Level Procedural Maze Survival Adventure
+
+Act as a senior HTML5 game developer, JavaScript game engineer, gameplay systems architect, UI/UX designer, AI behaviour engineer and game development specialist.
+
+Your task is to DESIGN AND BUILD a fully functional, polished, browser-based 2D top-down maze survival adventure game titled:
+
+# NO ESCAPE
+
+**Official tagline: SURVIVE. EXPLORE. ESCAPE.**
+
+The game must be playable, visually attractive, challenging, responsive and suitable for both desktop and mobile browsers.
+
+This is not a static game concept, mockup or prototype containing decorative buttons. Build the actual working game, including functional controls, collision detection, maze generation, enemy AI, level progression, power-ups, environmental mechanics and persistent player progress.
+
+Do not merely describe what should be implemented. Implement it.
+
+---
+
+# 1. GAME OVERVIEW
+
+NO ESCAPE is a single-player survival maze adventure consisting of 100 progressively challenging levels.
+
+The player is placed inside a procedurally generated maze. The objective is to navigate through the maze, avoid hostile enemies, collect useful items, discover secret locations, survive changing environmental conditions and reach the exit.
+
+The game should combine:
+
+- Maze exploration.
+- Survival and enemy avoidance.
+- Procedural maze generation.
+- Day-and-night environmental cycles.
+- Dynamic lighting and limited nighttime visibility.
+- Teleportation portals.
+- Collectible power-ups.
+- Keys and locked exits.
+- Environmental traps.
+- Intelligent enemies.
+- Secret rooms and treasures.
+- Boss encounters.
+- Increasing difficulty.
+- A structured 100-level progression system.
+
+Every level should present a meaningful challenge.
+
+The player should feel safe enough to explore during daytime but vulnerable when darkness arrives.
+
+The experience should create anticipation, suspense, unpredictability and a satisfying feeling of accomplishment.
+
+---
+
+# 2. BRANDING AND VISUAL IDENTITY
+
+The official game name is:
+
+NO ESCAPE
+
+Use a striking RED AND YELLOW colour scheme.
+
+Official colours:
+
+- Primary red: #E52B2B
+- Deep red: #B81717
+- Electric yellow: #FFD43B
+- Golden yellow: #FFB800
+- Dark charcoal: #171717
+- Secondary charcoal: #252525
+- Warm white: #FFF7E6
+- Muted grey: #999999
+
+Design rules:
+
+1. Red and yellow must be the dominant brand colours.
+2. Dark charcoal should provide the foundation for the visual experience.
+3. Yellow should be used for important objects, collectibles, the player indicator, rewards and highlights.
+4. Red should indicate danger, enemy threats, warnings, health loss and major action buttons.
+5. Maintain strong contrast and readable text.
+6. Avoid excessive gradients, unnecessary glassmorphism, oversized cards and cluttered layouts.
+7. Use polished shadows, subtle lighting, smooth animations and carefully controlled visual effects.
+8. Make the game look like a professionally produced indie adventure game rather than a basic school programming project.
+
+The maze itself should be visually interesting, with clearly distinguishable walls, pathways, entrances, obstacles, portals and exits.
+
+Use a top-down perspective throughout gameplay.
+
+The visual direction should combine clean 2D game graphics with atmospheric lighting.
+
+Create a distinctive player character and recognisable enemy designs.
+
+Use CSS, Canvas rendering and custom-drawn graphics or lightweight assets where appropriate. Do not make the game dependent on inaccessible external image assets.
+
+---
+
+# 3. MAIN MENU AND GAME NAVIGATION
+
+Build a polished main menu.
+
+The main menu should include:
+
+- NO ESCAPE logo/title.
+- Official tagline.
+- Play.
+- Continue.
+- Level Selection.
+- How to Play.
+- Settings.
+- Credits.
+
+The Continue button should resume the player's saved progression if available.
+
+The Level Selection interface should show 100 levels grouped into 10 chapters.
+
+Locked levels must remain inaccessible until unlocked through progression.
+
+Display completed levels, current level and available rewards clearly.
+
+Include an attractive animated background featuring a moving or subtly illuminated maze.
+
+Create the following gameplay states:
+
+1. Main menu.
+2. Chapter/level selection.
+3. Level introduction.
+4. Active gameplay.
+5. Paused gameplay.
+6. Level completed.
+7. Game over.
+8. Victory screen after completing Level 100.
+
+Every menu button must work.
+
+---
+
+# 4. CORE GAMEPLAY AND PLAYER MOVEMENT
+
+Create a 2D top-down maze game.
+
+The player must be able to move through open maze pathways but must never pass through solid walls or blocked obstacles.
+
+Desktop controls:
+
+- W / Up Arrow: Move up.
+- S / Down Arrow: Move down.
+- A / Left Arrow: Move left.
+- D / Right Arrow: Move right.
+- Space: Activate an available special ability where applicable.
+- Escape: Pause the game.
+
+Mobile controls:
+
+- Implement a responsive on-screen virtual joystick or directional control pad.
+- The controls must work reliably on touchscreens.
+- Prevent the browser from scrolling the page while the player is actively using the game controls.
+- Ensure the controls do not unnecessarily obscure the maze.
+
+Movement should be responsive and smooth.
+
+Implement reliable collision detection and movement constraints.
+
+The player should be able to navigate narrow corridors without getting stuck between tiles.
+
+The player should have a visible health indicator.
+
+Start with three health points.
+
+An enemy collision should remove one health point, with a brief invulnerability period to prevent repeated damage from one collision.
+
+When health reaches zero, trigger the Game Over state.
+
+Allow the player to retry the level.
+
+Include optional checkpoints on selected difficult levels.
+
+---
+
+# 5. PROCEDURAL MAZE GENERATION
+
+This is one of the most important systems.
+
+Do not create 100 individually hardcoded maze layouts.
+
+Build a reusable procedural maze generation engine.
+
+Each level must be generated using configurable parameters such as:
+
+- Maze width and height.
+- Number of dead ends.
+- Corridor complexity.
+- Number of intersections.
+- Number of obstacles.
+- Number and type of enemies.
+- Number of collectible items.
+- Number of power-ups.
+- Portal availability.
+- Locked doors.
+- Hazard locations.
+- Secret-room opportunities.
+
+Use a reliable maze-generation algorithm such as randomized depth-first search, recursive backtracking or another suitable approach.
+
+Maze generation must create valid, connected layouts.
+
+CRITICAL MAZE VALIDATION REQUIREMENTS:
+
+1. Every generated level must have a valid path from the starting location to the exit.
+2. The starting position must never overlap a wall or enemy.
+3. The exit must never spawn inside a wall.
+4. Power-ups and collectibles must spawn in accessible locations.
+5. Portals must have valid destinations.
+6. Enemies must spawn in navigable locations.
+7. Keys must be reachable before their corresponding locked doors.
+8. Environmental hazards must not permanently block all routes.
+9. Secret rooms must not make the level impossible to complete.
+10. The generation system must detect and regenerate invalid layouts.
+
+Use deterministic seeds where helpful so that a level can be recreated when necessary.
+
+Aim for a different maze layout on each new level or level attempt, while ensuring saved progression and checkpoints behave consistently.
+
+Use a configurable maze grid that scales as the game progresses.
+
+Make later levels larger and more complex without sacrificing performance.
+
+---
+
+# 6. DAY AND NIGHT CYCLE
+
+The day-and-night cycle must be one of the game's defining features.
+
+The environment must continuously transition between daytime and nighttime.
+
+DEFAULT SETTINGS:
+
+- Daytime duration: 90 seconds.
+- Nighttime duration: 45 seconds.
+- Transition duration: 3 seconds.
+- Nighttime visibility radius: approximately 3 maze tiles around the player.
+
+Make these settings configurable.
+
+DAY MODE:
+
+During daytime:
+
+- The player can see the entire maze.
+- Walls, pathways, enemies, portals, collectibles and hazards are clearly visible.
+- The player can study the maze and plan a route.
+- Use bright environmental lighting.
+
+NIGHT MODE:
+
+When nighttime begins:
+
+- Gradually darken the entire maze.
+- Restrict visibility to a circular area surrounding the player.
+- The visible radius should be approximately three maze tiles.
+- Areas outside the visibility radius must be hidden by darkness.
+- The player should only see nearby maze sections.
+- Enemies outside the player's visibility region should not be visible.
+- Enemies should still move and behave intelligently outside the visible area.
+
+Implement a proper fog-of-war system using Canvas clipping, radial gradients, masks or an equivalent efficient approach.
+
+The player should have a small visible light source surrounding their character during darkness.
+
+Do not simply place a transparent black overlay over the entire screen. The lighting must actually reveal the area immediately surrounding the player.
+
+TRANSITION EFFECTS:
+
+Create gradual sunrise and sunset transitions.
+
+Do not suddenly switch from bright daylight to complete darkness.
+
+Use a visible countdown indicator showing the remaining time before the next environmental transition.
+
+A short atmospheric sound should signal the beginning of night.
+
+The player should hear subtle environmental audio during nighttime.
+
+---
+
+# 7. ENEMY SYSTEM AND INTELLIGENT AI
+
+Create multiple enemy types with different personalities and behaviours.
+
+Enemies should be intelligent enough to create interesting challenges without knowing the player's location all the time.
+
+ENEMY 1: THE WANDERER
+
+- Moves around the maze using random but valid pathways.
+- Does not actively pursue the player.
+- Can accidentally encounter the player.
+- Mostly introduced in early levels.
+
+ENEMY 2: THE HUNTER
+
+- Patrols parts of the maze.
+- Can detect the player within a certain visual range.
+- Pursues the player when detection conditions are met.
+- Remembers the player's last known position.
+- Searches nearby corridors when the player escapes.
+- Returns to patrol behaviour when detection is lost.
+
+ENEMY 3: THE SHADOW
+
+- More dangerous during nighttime.
+- Moves faster when the maze is dark.
+- Has reduced visibility to the player.
+- Can detect the player through sound or proximity.
+- Should be used primarily in advanced levels.
+
+ENEMY 4: THE GUARDIAN
+
+- Protects important sections of the maze.
+- Guards keys, treasures, special passages or the exit.
+- Has a defined patrol route.
+- Can pursue the player if they enter its territory.
+
+ENEMY AI REQUIREMENTS:
+
+Use pathfinding algorithms such as A* or BFS to navigate maze corridors.
+
+Enemies must not move through walls.
+
+Different enemies must have different detection ranges, movement speeds and behaviour rules.
+
+Introduce a line-of-sight system where appropriate.
+
+Some enemies should detect movement through sound rather than direct sight.
+
+Running can generate more noise than walking.
+
+Do not give every enemy perfect knowledge of the player's location.
+
+Create appropriate enemy animations and visual indicators when an enemy detects or pursues the player.
+
+Enemy behaviour should remain performant even when several enemies are active.
+
+---
+
+# 8. TELEPORTATION PORTALS
+
+Create randomly appearing teleportation portals.
+
+There should be two main portal categories.
+
+NORMAL PORTALS:
+
+- Generate a pair of portals in valid maze locations.
+- Entering one transports the player to the other.
+- Portal destinations should be reachable and safe.
+- Portals should not transport the player directly inside walls, enemies or hazards.
+- Give portals distinctive glowing animations.
+- Add a teleportation visual and sound effect.
+
+GOLDEN PORTALS:
+
+- Rarer than normal portals.
+- Should transport players to a location closer to the exit.
+- Their destinations should be deliberately selected.
+- They should be particularly valuable in larger and more difficult mazes.
+
+Portal generation rules:
+
+1. Portals must spawn on accessible maze tiles.
+2. Portal destinations should not be randomly selected without validation.
+3. Avoid repeatedly teleporting the player into an immediate danger situation.
+4. Do not place both portals so close together that teleportation becomes meaningless.
+5. Introduce temporary portals that disappear after a limited period.
+6. Do not make portal availability guaranteed on every level.
+
+Make portal encounters exciting and visually recognisable.
+
+---
+
+# 9. POWER-UP SYSTEM
+
+Create the following collectible power-ups.
+
+1. PROTECTIVE SHIELD
+
+Protects the player from one enemy collision.
+
+2. SPEED BOOST
+
+Temporarily increases the player's movement speed.
+
+3. FREEZE BLAST
+
+Temporarily freezes nearby enemies.
+
+4. MAZE SCANNER
+
+Reveals the complete maze layout for a few seconds, including during nighttime.
+
+5. DECOY
+
+Creates a temporary fake player position that attracts enemies capable of detecting sound or movement.
+
+6. NIGHT VISION
+
+Temporarily increases the player's visibility radius during nighttime.
+
+POWER-UP REQUIREMENTS:
+
+- Each power-up must have a distinctive icon or visual representation.
+- Collecting a power-up must produce a clear visual and audio response.
+- Display active abilities and their remaining duration.
+- Power-ups must expire correctly.
+- Abilities should be balanced.
+- Make some abilities rare and others more common.
+- Create an inventory or ability area in the gameplay interface.
+
+Do not allow the player to activate unavailable abilities.
+
+The power-up system must be fully functional.
+
+---
+
+# 10. KEYS AND LOCKED EXITS
+
+Some levels must require the player to find keys before reaching the exit.
+
+Create different key colours or designs where necessary.
+
+Implement:
+
+- Collectible keys.
+- Locked doors.
+- Unlock animations.
+- Door-opening sounds.
+- Multiple-key challenges on advanced levels.
+
+A locked exit must remain inaccessible until the required condition is fulfilled.
+
+Communicate the player's objective clearly at the beginning of each level.
+
+---
+
+# 11. COLLECTIBLES AND REWARDS
+
+Introduce coins and collectible treasures.
+
+Players can collect coins throughout the maze.
+
+Coins should be used for a simple in-game reward and customisation system.
+
+Potential unlockables:
+
+- Alternative player skins.
+- Character colours.
+- Special visual trails.
+- Cosmetic portal effects.
+- Alternative character designs.
+
+Introduce rare treasure rooms and hidden collectible items.
+
+Create a coin counter in the gameplay interface.
+
+Reward players for completing levels, discovering secrets and taking optional risks.
+
+Do not make purchased cosmetic features necessary to complete the game.
+
+---
+
+# 12. ENVIRONMENTAL HAZARDS
+
+Introduce hazards progressively.
+
+Examples include:
+
+- Spike traps.
+- Fire corridors.
+- Moving obstacles.
+- Collapsing floor tiles.
+- Laser barriers.
+- Rotating or moving walls.
+- Dangerous floor sections.
+
+Hazards must have clear visual indicators whenever possible.
+
+Create appropriate animation and collision handling.
+
+Some traps should activate only when the player steps on particular tiles.
+
+Some hazards should only become active during nighttime.
+
+Ensure hazards are challenging but fair.
+
+Never generate unavoidable traps that make a level impossible.
+
+---
+
+# 13. THE SHIFTING MAZE
+
+Introduce the Shifting Maze mechanic in later levels.
+
+Certain walls or corridors should change their positions or accessibility when night arrives.
+
+For example:
+
+- A corridor open during daytime may become blocked at night.
+- A new passage might open when darkness arrives.
+- Certain walls may move slowly.
+- Secret routes may appear temporarily.
+
+IMPORTANT:
+
+The shifting system must not permanently block every available route to the exit.
+
+Always preserve a valid escape route.
+
+Give players enough warning before major changes take place.
+
+Introduce this mechanic gradually rather than overwhelming beginners.
+
+---
+
+# 14. MYSTERY ROOMS AND SECRET LOCATIONS
+
+Generate occasional hidden locations within the maze.
+
+These may contain:
+
+- Rare coins.
+- Special power-ups.
+- Secret treasures.
+- Additional checkpoints.
+- Temporary safe zones.
+- Bonus objectives.
+
+Some mystery rooms may only become accessible at night.
+
+Secret rooms must be optional and must not be required to complete normal levels.
+
+Add a discovery animation and appropriate reward.
+
+---
+
+# 15. BOSS ENCOUNTERS
+
+Introduce special boss encounters at milestone levels.
+
+Recommended milestones:
+
+Levels 10, 20, 30, 40, 50, 60, 70, 80, 90 and 100.
+
+Each boss should have a distinctive behaviour or challenge.
+
+Possible mechanics include:
+
+- A giant Hunter that pursues the player.
+- A Shadow that becomes extremely aggressive at night.
+- A Guardian protecting multiple locked gates.
+- A boss that changes the maze layout.
+- A boss that requires activating switches to escape.
+- A final boss that combines multiple enemy abilities.
+
+The boss should create a meaningful gameplay challenge rather than simply having more health.
+
+Make milestone levels visually and mechanically distinct from ordinary levels.
+
+For the final level, create a memorable ultimate survival challenge.
+
+---
+
+# 16. THE COMPLETE 100-LEVEL PROGRESSION SYSTEM
+
+Create exactly 100 numbered levels, arranged into 10 chapters.
+
+CHAPTER 1: THE BEGINNING — LEVELS 1–10
+
+Introduce basic maze navigation, movement, collectibles and the Wanderer.
+
+CHAPTER 2: THE PURSUIT — LEVELS 11–20
+
+Introduce the Hunter, more complex corridors and basic survival challenges.
+
+CHAPTER 3: THE DARKNESS — LEVELS 21–30
+
+Introduce more demanding night cycles, limited visibility and the Shadow enemy.
+
+CHAPTER 4: THE PORTAL WORLD — LEVELS 31–40
+
+Introduce teleportation portals, Golden Portals and portal-based challenges.
+
+CHAPTER 5: THE TRAPS — LEVELS 41–50
+
+Introduce environmental hazards, locked doors and more complex maze arrangements.
+
+CHAPTER 6: THE HUNT — LEVELS 51–60
+
+Introduce multiple intelligent enemy types, increased enemy numbers and greater pursuit difficulty.
+
+CHAPTER 7: THE FORGOTTEN MAZE — LEVELS 61–70
+
+Introduce hidden rooms, longer routes, limited resources and advanced navigation challenges.
+
+CHAPTER 8: THE SHADOW REALM — LEVELS 71–80
+
+Introduce more dangerous nighttime conditions, shifting corridors and aggressive enemies.
+
+CHAPTER 9: THE LABYRINTH — LEVELS 81–90
+
+Combine the previous mechanics into increasingly complex survival challenges.
+
+CHAPTER 10: THE FINAL ESCAPE — LEVELS 91–100
+
+Create the ultimate series of maze survival challenges.
+
+Level 100 must provide a satisfying final challenge and a memorable victory experience.
+
+DIFFICULTY PROGRESSION:
+
+Difficulty should increase through a combination of:
+
+- Maze size.
+- Maze complexity.
+- Enemy intelligence.
+- Enemy movement speed.
+- Enemy detection range.
+- Enemy combinations.
+- Environmental hazards.
+- Nighttime difficulty.
+- Reduced availability of power-ups.
+- More demanding objectives.
+- More complex portal arrangements.
+
+Do not increase difficulty simply by adding more enemies.
+
+Some levels should be difficult because of maze design, while others should be difficult because of enemy behaviour or environmental conditions.
+
+Every chapter should introduce something meaningful.
+
+Avoid making all levels feel identical.
+
+---
+
+# 17. GAMEPLAY HUD AND INTERFACE
+
+Design a professional, minimalist gameplay interface.
+
+The main gameplay area should remain the visual priority.
+
+Recommended layout:
+
+TOP LEFT:
+- Current level.
+- Chapter name.
+- Level objective.
+
+TOP CENTRE:
+- Day/night status.
+- Environmental countdown.
+- Day/night progress indicator.
+
+TOP RIGHT:
+- Health.
+- Coin counter.
+- Pause button.
+
+BOTTOM AREA:
+- Power-up inventory.
+- Active ability indicators.
+- Remaining ability duration.
+
+MAZE AREA:
+- Main maze.
+- Player character.
+- Enemies.
+- Portals.
+- Collectibles.
+- Hazards.
+- Lighting effects.
+
+Make the HUD responsive.
+
+On smaller screens, rearrange the elements without covering important gameplay sections.
+
+Include clear pause, retry, resume and exit-to-menu controls.
+
+---
+
+# 18. AUDIO AND ATMOSPHERE
+
+Create an immersive audio experience.
+
+Include:
+
+- Background music.
+- Daytime ambience.
+- Nighttime ambience.
+- Player movement sounds.
+- Enemy footsteps.
+- Enemy detection alerts.
+- Portal activation sounds.
+- Power-up collection sounds.
+- Collision sounds.
+- Level completion sounds.
+- Game-over sounds.
+- Boss encounter effects.
+
+Use different ambient audio for day and night.
+
+Enemy sound cues should give useful information without revealing every enemy's exact location.
+
+Provide settings to control music and sound effects independently.
+
+Start audio only after the player interacts with the game, following browser audio restrictions.
+
+If external audio assets are unavailable, use simple original synthesized effects or lightweight generated sounds.
+
+---
+
+# 19. SAVED PROGRESS AND GAME DATA
+
+Implement persistent local game progress.
+
+Use browser localStorage initially.
+
+Save:
+
+- Highest unlocked level.
+- Completed levels.
+- Current chapter.
+- Coin balance.
+- Unlocked character skins.
+- Settings.
+- Sound preferences.
+- Last selected level.
+- Relevant checkpoint information.
+
+Progress must persist after refreshing or closing the browser.
+
+Include a confirmation before resetting all game progress.
+
+Structure the storage system so that a cloud-save system could be introduced later without rewriting the entire game engine.
+
+---
+
+# 20. SETTINGS AND ACCESSIBILITY
+
+Include a proper settings screen.
+
+Allow the player to adjust:
+
+- Music volume.
+- Sound effects volume.
+- Daytime duration.
+- Nighttime duration.
+- Control sensitivity.
+- Touch-control layout.
+- Graphics quality where applicable.
+- Reduced motion.
+- Screen shake.
+- Fullscreen mode.
+
+Allow the player to pause the game at any time.
+
+Provide a short, understandable How to Play guide.
+
+Use readable text and sufficient contrast throughout.
+
+---
+
+# 21. TECHNICAL ARCHITECTURE
+
+Build the project as a modular browser game.
+
+Preferred foundation:
+
+- HTML5.
+- CSS3.
+- JavaScript.
+- HTML5 Canvas for game rendering.
+- LocalStorage for progress persistence.
+
+Use the existing project environment and conventions if a starter project already exists. Do not unnecessarily replace a working scaffold.
+
+If the environment requires React, use it for menus and interface management while keeping the core game engine modular.
+
+Separate major responsibilities into logical modules.
+
+Suggested architecture:
+
+- Game Engine.
+- Maze Generator.
+- Maze Validator.
+- Maze Renderer.
+- Player Controller.
+- Enemy AI.
+- Pathfinding.
+- Day/Night Manager.
+- Lighting and Fog of War.
+- Portal Manager.
+- Power-up Manager.
+- Hazard Manager.
+- Level Manager.
+- Progress and Storage Manager.
+- Audio Manager.
+- Input Controller.
+- UI Manager.
+
+Use a proper game loop with delta-time-based updates.
+
+Avoid tying gameplay speed to the monitor refresh rate.
+
+Maintain consistent movement and enemy timing across different devices.
+
+Clean up event listeners and animation loops appropriately.
+
+Optimise rendering and collision checks.
+
+Avoid unnecessary dependencies and external API requirements.
+
+The game should work without requiring a backend or paid external service.
+
+---
+
+# 22. RESPONSIVENESS AND PERFORMANCE
+
+The game must support:
+
+- Desktop browsers.
+- Laptop browsers.
+- Tablets.
+- Mobile phones.
+
+Adapt the Canvas dimensions to the available screen size while maintaining the correct maze proportions.
+
+Implement appropriate touch controls.
+
+Prevent unnecessary page scrolling during active gameplay.
+
+Use an efficient rendering approach so that larger mazes and multiple enemies remain playable.
+
+Make sure the game does not become unresponsive when several enemies are active.
+
+Provide a reasonable frame-rate target of approximately 60 FPS on supported devices, with graceful performance on less powerful hardware.
+
+---
+
+# 23. GAME QUALITY AND VALIDATION REQUIREMENTS
+
+Before considering the project complete, verify that:
+
+1. The main menu works.
+2. The Play button starts the game.
+3. All 100 levels are accessible through progression.
+4. Locked levels cannot be selected.
+5. Player movement works using keyboard controls.
+6. Touch controls work on mobile.
+7. The player cannot pass through walls.
+8. Maze generation creates solvable layouts.
+9. The exit can always be reached.
+10. Enemies navigate valid pathways.
+11. Enemy AI behaves differently for different enemy types.
+12. Enemy collisions affect player health correctly.
+13. The day/night cycle repeats continuously.
+14. Nighttime fog-of-war works correctly.
+15. The player's night vision radius is configurable.
+16. Portals transport players to valid locations.
+17. Golden Portals move the player closer to the objective.
+18. Every power-up performs its intended action.
+19. Keys and locked exits work correctly.
+20. Environmental hazards function properly.
+21. The Shifting Maze preserves an escape route.
+22. Checkpoints behave correctly.
+23. Boss encounters are functional.
+24. Level completion unlocks the next level.
+25. Coins and rewards are recorded properly.
+26. Progress survives a browser refresh.
+27. Pause and resume work correctly.
+28. Game-over and retry functionality work.
+29. The final victory screen appears after Level 100.
+30. The game remains playable on mobile and desktop.
+
+Handle errors and edge cases.
+
+Do not use decorative controls that have no functionality.
+
+Do not leave important features as placeholders.
+
+---
+
+# 24. DEVELOPMENT APPROACH
+
+Build the actual game in a structured manner.
+
+Prioritise a working game engine over decorative features.
+
+Recommended implementation order:
+
+PHASE 1:
+- Project foundation.
+- Main menu.
+- Maze generator.
+- Maze rendering.
+- Player movement.
+- Wall collision.
+- Exit and level completion.
+
+PHASE 2:
+- Enemy types.
+- Enemy movement.
+- Pathfinding.
+- Health and collision.
+- Game-over and retry.
+
+PHASE 3:
+- Day/night cycle.
+- Dynamic lighting.
+- Fog of war.
+- Environmental audio.
+
+PHASE 4:
+- Portals.
+- Power-ups.
+- Keys.
+- Locked exits.
+- Coins and collectibles.
+
+PHASE 5:
+- Traps.
+- Shifting maze.
+- Mystery rooms.
+- Checkpoints.
+- Boss encounters.
+
+PHASE 6:
+- Complete 100-level progression.
+- Difficulty balancing.
+- Save system.
+- Mobile controls.
+- Interface refinements.
+- Performance optimisation.
+
+These phases describe implementation priorities, not permission to omit features.
+
+The completed project must contain the entire intended system.
+
+---
+
+# 25. FINAL BUILD INSTRUCTIONS
+
+Begin by examining the existing project environment.
+
+Then implement NO ESCAPE as a complete playable browser game.
+
+Important instructions:
+
+- Do not respond with a game design document instead of building the game.
+- Do not provide pseudocode in place of working code.
+- Do not leave buttons non-functional.
+- Do not use a static image to simulate gameplay.
+- Do not replace procedural maze generation with a collection of static screenshots.
+- Do not make all enemies behave identically.
+- Do not omit mobile controls.
+- Do not omit the actual nighttime visibility system.
+- Do not make the 100-level system merely a visual list without real level progression.
+- Do not create an unvalidated procedural generator that can produce impossible levels.
+- Do not compromise gameplay functionality for visual decoration.
+
+Use clean, maintainable and modular code.
+
+Make sensible implementation decisions wherever necessary without repeatedly requesting confirmation.
+
+The priority is a polished, working and genuinely entertaining game.
+
+## FINAL PRODUCT
+
+**NO ESCAPE**
+
+SURVIVE. EXPLORE. ESCAPE.
+
+100 LEVELS. ONE WAY OUT.
+
+Build it.

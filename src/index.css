@@ -1,0 +1,95 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --color-red-primary: #E52B2B;
+    --color-red-deep: #B81717;
+    --color-yellow-electric: #FFD43B;
+    --color-yellow-golden: #FFB800;
+    --color-charcoal-dark: #171717;
+    --color-charcoal-secondary: #252525;
+    --color-warm-white: #FFF7E6;
+    --color-muted-grey: #999999;
+
+    --font-display: 'Barlow Condensed', sans-serif;
+    --font-sans: 'Plus Jakarta Sans', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  html, body, #root {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #171717;
+    color: #FFF7E6;
+    font-family: var(--font-sans);
+    overflow: hidden;
+    touch-action: none;
+    overscroll-behavior: none;
+  }
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-sans {
+  font-family: var(--font-sans);
+}
+
+.font-mono-tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.stroke-text {
+  paint-order: stroke fill;
+  -webkit-text-stroke: 3px #171717;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
+}
+
+/* Custom subtle scrollbars for level selection & modals */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #171717;
+}
+::-webkit-scrollbar-thumb {
+  background: #383838;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #E52B2B;
+}
+
+@keyframes floatUpFade {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+  }
+  18% {
+    opacity: 0.92;
+    transform: translateY(0px) scale(1);
+  }
+  75% {
+    opacity: 0.78;
+    transform: translateY(-10px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-22px) scale(0.96);
+  }
+}
+
+.animate-float-up-fade {
+  animation: floatUpFade 1.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+

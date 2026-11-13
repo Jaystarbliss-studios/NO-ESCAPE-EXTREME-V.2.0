@@ -1,0 +1,6 @@
+{
+  "name": "NO ESCAPE — 100-Level Procedural Maze Survival",
+  "description": "100 levels. One way out. Explore the maze by daylight, survive relentless shadow hunters when darkness falls, and reach the Golden Portal before time runs out.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
