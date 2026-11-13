@@ -1,14 +1,17 @@
 import React from 'react';
+import { formatSpeedrunTime } from '../game/dailyChallenge';
 import { GameState, RunSummarySnapshot } from '../game/types';
 
 interface StatusModalsProps {
   gameState: GameState;
   summary: RunSummarySnapshot | null;
   currentLevel: number;
+  isDailyChallenge?: boolean;
   onResume: () => void;
   onRestartLevel: () => void;
   onRespawnCheckpoint: () => void;
   onNextLevel: () => void;
+  onOpenDailyLeaderboard: () => void;
   onOpenSettings: () => void;
   onReturnToTitle: () => void;
 }
@@ -17,10 +20,12 @@ export const StatusModals: React.FC<StatusModalsProps> = ({
   gameState,
   summary,
   currentLevel,
+  isDailyChallenge = false,
   onResume,
   onRestartLevel,
   onRespawnCheckpoint,
   onNextLevel,
+  onOpenDailyLeaderboard,
   onOpenSettings,
   onReturnToTitle,
 }) => {
@@ -35,7 +40,7 @@ export const StatusModals: React.FC<StatusModalsProps> = ({
         <div className="w-full max-w-xs bg-[#252525] border border-[#FFF7E6]/15 rounded-lg p-4 shadow-2xl space-y-3.5">
           <div className="border-b border-[#FFF7E6]/10 pb-2.5">
             <div className="text-[10px] font-mono-tabular uppercase tracking-widest text-[#FFD43B]">
-              SECTOR {currentLevel} · PAUSED
+              {isDailyChallenge ? 'DAILY CHALLENGE · PAUSED' : `SECTOR ${currentLevel} · PAUSED`}
             </div>
             <h2 className="font-display text-xl sm:text-2xl font-extrabold uppercase tracking-wider text-[#FFF7E6]">
               GAME PAUSED
@@ -55,8 +60,17 @@ export const StatusModals: React.FC<StatusModalsProps> = ({
               onClick={onRestartLevel}
               className="w-full py-1.5 px-3 bg-[#1A1A1A] hover:bg-[#303030] border border-[#FFF7E6]/15 text-[#FFF7E6] text-[10px] font-bold uppercase tracking-wider rounded cursor-pointer"
             >
-              Restart Level {currentLevel}
+              {isDailyChallenge ? 'Restart Daily Seed' : `Restart Level ${currentLevel}`}
             </button>
+            {isDailyChallenge && (
+              <button
+                type="button"
+                onClick={onOpenDailyLeaderboard}
+                className="w-full py-1.5 px-3 bg-[#2B2210] hover:bg-[#382C14] border border-[#FFD43B]/45 text-[#FFD43B] text-[10px] font-bold uppercase tracking-wider rounded cursor-pointer"
+              >
+                Global Daily Leaderboard
+              </button>
+            )}
             <button
               type="button"
               onClick={onOpenSettings}
@@ -80,6 +94,9 @@ export const StatusModals: React.FC<StatusModalsProps> = ({
   if (gameState === 'gameover' && summary) {
     const isVictory100 = summary.outcome === 'final_victory';
     const isLevelClear = summary.outcome === 'level_complete' || isVictory100;
+    const isDaily = Boolean(summary.isDailyChallenge);
+    const clearMs = summary.clearTimeMs ?? Math.round(summary.clearTimeSeconds * 1000);
+    const bestMs = summary.bestTimeMs ?? Math.round(summary.bestTimeSeconds * 1000);
 
     return (
       <div
@@ -95,10 +112,14 @@ export const StatusModals: React.FC<StatusModalsProps> = ({
                 isLevelClear ? 'text-[#FFD43B]' : 'text-[#E52B2B]'
               }`}
             >
-              LEVEL {summary.level} · {summary.chapterTitle}
+              {isDaily
+                ? `${summary.dailyDateKey} · ${summary.dailySeedCode || ''}`
+                : `LEVEL ${summary.level} · ${summary.chapterTitle}`}
             </div>
             <h2 className="font-display text-2xl sm:text-3xl font-extrabold uppercase tracking-wider text-[#FFF7E6] mt-0.5">
-              {isVictory100
+              {isDaily && isLevelClear
+                ? 'DAILY GAUNTLET CLEARED!'
+                : isVictory100
                 ? 'ULTIMATE ESCAPE!'
                 : isLevelClear
                 ? 'SECTOR CLEARED'
@@ -111,12 +132,12 @@ export const StatusModals: React.FC<StatusModalsProps> = ({
               <div className="text-[8px] font-mono-tabular uppercase text-[#999999]">
                 {isLevelClear ? 'TIME' : 'SURVIVED'}
               </div>
-              <div className="font-display text-lg font-bold font-mono-tabular text-[#FFF7E6]">
-                {Math.round(summary.clearTimeSeconds)}s
+              <div className="font-display text-base sm:text-lg font-bold font-mono-tabular text-[#FFF7E6]">
+                {isDaily ? formatSpeedrunTime(clearMs) : `${Math.round(summary.clearTimeSeconds)}s`}
               </div>
-              {isLevelClear && (
+              {isLevelClear && bestMs > 0 && (
                 <div className="text-[8px] font-mono-tabular text-[#FFD43B]">
-                  BEST: {Math.round(summary.bestTimeSeconds)}s
+                  BEST: {isDaily ? formatSpeedrunTime(bestMs) : `${Math.round(summary.bestTimeSeconds)}s`}
                 </div>
               )}
             </div>
@@ -151,7 +172,17 @@ export const StatusModals: React.FC<StatusModalsProps> = ({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            {isLevelClear && !isVictory100 && (
+            {isDaily && (
+              <button
+                type="button"
+                onClick={onOpenDailyLeaderboard}
+                className="w-full py-2 px-3 bg-[#FFD43B] hover:bg-[#FFB800] text-[#171717] font-display text-base font-bold uppercase tracking-wider rounded cursor-pointer"
+              >
+                View Global Leaderboard
+              </button>
+            )}
+
+            {!isDaily && isLevelClear && !isVictory100 && (
               <button
                 type="button"
                 data-start="true"
@@ -162,7 +193,7 @@ export const StatusModals: React.FC<StatusModalsProps> = ({
               </button>
             )}
 
-            {!isLevelClear && summary.canRespawnAtCheckpoint && (
+            {!isDaily && !isLevelClear && summary.canRespawnAtCheckpoint && (
               <button
                 type="button"
                 data-start="true"
@@ -175,7 +206,7 @@ export const StatusModals: React.FC<StatusModalsProps> = ({
 
             <button
               type="button"
-              data-start={isLevelClear && !isVictory100 ? undefined : 'true'}
+              data-start={!isDaily && isLevelClear && !isVictory100 ? undefined : 'true'}
               onClick={onRestartLevel}
               className={`w-full py-1.5 px-3 rounded font-display text-base font-bold uppercase tracking-wider cursor-pointer ${
                 !isLevelClear
@@ -183,7 +214,13 @@ export const StatusModals: React.FC<StatusModalsProps> = ({
                   : 'bg-[#1A1A1A] hover:bg-[#303030] border border-[#FFF7E6]/15 text-[#FFF7E6]'
               }`}
             >
-              {isLevelClear ? 'Replay Level' : 'Retry Level'}
+              {isDaily
+                ? isLevelClear
+                  ? 'Replay Daily Seed (Beat Time)'
+                  : 'Retry Daily Seed'
+                : isLevelClear
+                ? 'Replay Level'
+                : 'Retry Level'}
             </button>
 
             <button
@@ -201,4 +238,3 @@ export const StatusModals: React.FC<StatusModalsProps> = ({
 
   return null;
 };
-

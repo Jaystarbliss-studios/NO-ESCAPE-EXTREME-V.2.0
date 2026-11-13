@@ -1,5 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { User } from 'firebase/auth';
 import { COSMETIC_CATALOG, getLevelConfig } from './game/chapters';
+import {
+  getBaselineDailyLeaderboard,
+  getDailyChallengeConfig,
+  getDailyInitialNightState,
+  getDailySeedCode,
+  getDailySeedForDate,
+  getTodayDateKey,
+  mergeLeaderboardEntries,
+} from './game/dailyChallenge';
 import { generateMaze, isTileWalkable } from './game/mazeGenerator';
 import { updateEnemyAI } from './game/pathfinding';
 import { ParticlePool } from './game/particlePool';
@@ -7,11 +17,14 @@ import { MazeRenderer, POWERUP_VISUAL_CONFIG } from './game/renderer';
 import { audioManager } from './game/audio';
 import {
   loadSavedProgress,
+  mergeCloudProgressWithLocal,
+  recordDailyCompletion,
   recordLevelCompletion,
   resetAllProgress,
   saveProgress,
 } from './game/storage';
 import {
+  DailyLeaderboardRecord,
   DecoyInstance,
   GameSettings,
   GameState,
@@ -22,8 +35,18 @@ import {
   SavedProgress,
   SubMenuState,
 } from './game/types';
+import {
+  loadCloudUserProgress,
+  signInWithGoogle,
+  signOutUser,
+  submitDailyLeaderboardScore,
+  subscribeAuthState,
+  subscribeToDailyLeaderboard,
+  syncUserProgressToCloud,
+} from './firebase';
 import { TitleScreen } from './components/TitleScreen';
 import { LevelSelectModal } from './components/LevelSelectModal';
+import { DailyChallengeModal } from './components/DailyChallengeModal';
 import { SettingsModal } from './components/SettingsModal';
 import { CosmeticsModal } from './components/CosmeticsModal';
 import { CreditsModal, HowToPlayModal } from './components/HowToPlayModal';
@@ -35,6 +58,8 @@ interface EngineMutableState {
   subMenu: SubMenuState;
   currentLevel: number;
   attemptCount: number;
+  isDailyChallenge: boolean;
+  dailyDateKey: string;
   maze: GeneratedMaze;
   player: PlayerEntity;
   decoys: DecoyInstance[];
@@ -133,6 +158,9 @@ function buildHudSnapshot(
     checkpointReached: eng.player.checkpointPos !== null,
     statusBanner: eng.statusBanner,
     pickupNotification: eng.pickupNotification,
+    isDailyChallenge: eng.isDailyChallenge,
+    dailyDateKey: eng.dailyDateKey,
+    elapsedRunTimeSec: eng.elapsedRunTime,
   };
 }
 
@@ -140,6 +168,16 @@ export default function App() {
   const [progress, setProgress] = useState<SavedProgress>(() => loadSavedProgress());
   const progressRef = useRef<SavedProgress>(progress);
   progressRef.current = progress;
+
+  const todayDateKey = useMemo(() => getTodayDateKey(), []);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const currentUserRef = useRef<User | null>(null);
+  currentUserRef.current = currentUser;
+
+  const [authReady, setAuthReady] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
+  const [cloudLeaderboard, setCloudLeaderboard] = useState<DailyLeaderboardRecord[]>([]);
 
   // Support ?autostart=1 to boot directly into 'playing'
   const initialAutoStart =
@@ -166,6 +204,8 @@ export default function App() {
       subMenu: 'none',
       currentLevel: startLvl,
       attemptCount: 0,
+      isDailyChallenge: false,
+      dailyDateKey: todayDateKey,
       maze: initialMaze,
       player: createInitialPlayer(initialMaze),
       decoys: [],
@@ -195,6 +235,96 @@ export default function App() {
   const [hud, setHud] = useState<HudSnapshot>(() =>
     buildHudSnapshot(engineRef.current!, progress.coins)
   );
+
+  // Firebase Auth & Cloud Progress Sync
+  useEffect(() => {
+    const unsub = subscribeAuthState(async (user) => {
+      setCurrentUser(user);
+      setAuthReady(true);
+      if (user) {
+        setCloudSyncStatus('syncing');
+        try {
+          const cloudData = await loadCloudUserProgress(user);
+          const merged = cloudData
+            ? mergeCloudProgressWithLocal(progressRef.current, cloudData)
+            : progressRef.current;
+          setProgress(merged);
+          await syncUserProgressToCloud(user, merged);
+          if (
+            merged.dailyBestDate === todayDateKey &&
+            merged.dailyBestTimeMs >= 1000
+          ) {
+            await submitDailyLeaderboardScore(user, {
+              dateKey: todayDateKey,
+              seed: getDailySeedForDate(todayDateKey),
+              clearTimeMs: merged.dailyBestTimeMs,
+              coinsCollected: 12,
+              damageTaken: 0,
+              skinId: merged.equippedSkin,
+            });
+          }
+          setCloudSyncStatus('synced');
+        } catch {
+          setCloudSyncStatus('error');
+        }
+      } else {
+        setCloudSyncStatus('idle');
+      }
+    });
+    return () => unsub();
+  }, [todayDateKey]);
+
+  // Only attach onSnapshot listener when auth is ready and user is authenticated
+  useEffect(() => {
+    if (!authReady || !currentUser) return;
+    const unsub = subscribeToDailyLeaderboard(todayDateKey, (entries) => {
+      setCloudLeaderboard(entries);
+    });
+    return () => unsub();
+  }, [authReady, currentUser, todayDateKey]);
+
+  const mergedDailyLeaderboard = useMemo(() => {
+    const baseline = getBaselineDailyLeaderboard(todayDateKey);
+    const localBest =
+      progress.dailyBestDate === todayDateKey && progress.dailyBestTimeMs >= 1000
+        ? {
+            dateKey: todayDateKey,
+            clearTimeMs: progress.dailyBestTimeMs,
+            displayName: currentUser?.displayName || 'You (Local Run)',
+            skinId: progress.equippedSkin,
+            uid: currentUser?.uid,
+          }
+        : null;
+    return mergeLeaderboardEntries(cloudLeaderboard, baseline, localBest);
+  }, [
+    cloudLeaderboard,
+    currentUser?.displayName,
+    currentUser?.uid,
+    progress.dailyBestDate,
+    progress.dailyBestTimeMs,
+    progress.equippedSkin,
+    todayDateKey,
+  ]);
+
+  const handleSignInWithGoogle = useCallback(async () => {
+    if (isSigningIn) return;
+    setIsSigningIn(true);
+    try {
+      await signInWithGoogle();
+    } catch {
+      // Popup closed or blocked
+    } finally {
+      setIsSigningIn(false);
+    }
+  }, [isSigningIn]);
+
+  const handleSignOut = useCallback(async () => {
+    try {
+      await signOutUser();
+    } catch {
+      // Ignore sign-out errors
+    }
+  }, []);
 
   // Sync document.body.dataset.state
   useEffect(() => {
@@ -232,6 +362,8 @@ export default function App() {
 
       eng.currentLevel = clampedLvl;
       eng.attemptCount = nextAttempt;
+      eng.isDailyChallenge = false;
+      eng.dailyDateKey = todayDateKey;
       eng.maze = newMaze;
       eng.player = createInitialPlayer(newMaze);
       eng.decoys = [];
@@ -272,8 +404,54 @@ export default function App() {
       setHud(buildHudSnapshot(eng, updatedProgress.coins));
       audioManager.startAmbient(startAtNight);
     },
-    []
+    [todayDateKey]
   );
+
+  const startDailyChallenge = useCallback(() => {
+    const eng = engineRef.current;
+    if (!eng) return;
+
+    const cfg = getDailyChallengeConfig(todayDateKey);
+    const newMaze = generateMaze(cfg);
+    // Deterministic starting phase for today's Daily Challenge so every player competes on identical conditions
+    const startAtNight = getDailyInitialNightState(todayDateKey);
+    const seedCode = getDailySeedCode(todayDateKey);
+
+    eng.currentLevel = cfg.level;
+    eng.attemptCount = 0;
+    eng.isDailyChallenge = true;
+    eng.dailyDateKey = todayDateKey;
+    eng.maze = newMaze;
+    eng.player = createInitialPlayer(newMaze);
+    eng.decoys = [];
+    eng.particles.clear();
+    eng.unlockedDoors.clear();
+    eng.elapsedRunTime = 0;
+    eng.cycleTimer = 0;
+    eng.isNight = startAtNight;
+    eng.nightFactor = startAtNight ? 1 : 0;
+    eng.hitstopTimer = 0;
+    eng.cameraTrauma = 0;
+    eng.cameraX = newMaze.start.x + 0.5;
+    eng.cameraY = newMaze.start.y + 0.5;
+    eng.damageTakenThisRun = 0;
+    eng.pickupNotification = null;
+    eng.pickupNotificationTimer = 0;
+    eng.statusBanner = `DAILY CHALLENGE ${seedCode} — ${startAtNight ? 'NIGHTFALL START' : 'DAYLIGHT START'}`;
+    eng.statusBannerTimer = 2.6;
+
+    keysHeldRef.current.clear();
+    if (typeof document !== 'undefined') {
+      (document.activeElement as HTMLElement | null)?.blur?.();
+      document.body.dataset.state = 'playing';
+    }
+
+    setSubMenu('none');
+    setRunSummary(null);
+    setGameState('playing');
+    setHud(buildHudSnapshot(eng, progressRef.current.coins));
+    audioManager.startAmbient(startAtNight);
+  }, [todayDateKey]);
 
   const handleRespawnAtCheckpoint = useCallback(() => {
     const eng = engineRef.current;
@@ -488,7 +666,11 @@ export default function App() {
           setProgress(updated);
           saveProgress(updated);
         } else if (code === 'KeyR') {
-          startLevel(eng.currentLevel, true);
+          if (eng.isDailyChallenge) {
+            startDailyChallenge();
+          } else {
+            startLevel(eng.currentLevel, true);
+          }
         }
       }
 
@@ -528,7 +710,7 @@ export default function App() {
       window.removeEventListener('blur', onBlurOrVisibility);
       document.removeEventListener('visibilitychange', onBlurOrVisibility);
     };
-  }, [activatePowerUp, cycleSelectedAbilitySlot, startLevel, usePrimaryAbility]);
+  }, [activatePowerUp, cycleSelectedAbilitySlot, startDailyChallenge, startLevel, usePrimaryAbility]);
 
   // Isolated 60Hz Canvas Simulation & Rendering Loop
   useEffect(() => {
@@ -625,6 +807,59 @@ export default function App() {
               onTriggerVictory: (isFinal100) => {
                 audioManager.stopAmbient();
                 audioManager.playLevelComplete();
+
+                if (eng.isDailyChallenge) {
+                  const clearMs = Math.max(1000, Math.round(eng.elapsedRunTime * 1000));
+                  const coinsEarned = eng.player.coinsEarnedThisRun + 10;
+                  const updatedProg = recordDailyCompletion(
+                    progressRef.current,
+                    eng.dailyDateKey,
+                    clearMs,
+                    coinsEarned
+                  );
+                  setProgress(updatedProg);
+
+                  const activeUser = currentUserRef.current;
+                  if (activeUser) {
+                    setCloudSyncStatus('syncing');
+                    Promise.all([
+                      syncUserProgressToCloud(activeUser, updatedProg),
+                      submitDailyLeaderboardScore(activeUser, {
+                        dateKey: eng.dailyDateKey,
+                        seed: eng.maze.config.seed,
+                        clearTimeMs: clearMs,
+                        coinsCollected: coinsEarned,
+                        damageTaken: eng.damageTakenThisRun,
+                        skinId: updatedProg.equippedSkin,
+                      }),
+                    ])
+                      .then(() => setCloudSyncStatus('synced'))
+                      .catch(() => setCloudSyncStatus('error'));
+                  }
+
+                  setRunSummary({
+                    level: eng.currentLevel,
+                    chapterTitle: eng.maze.config.chapterTitle,
+                    outcome: 'level_complete',
+                    clearTimeSeconds: eng.elapsedRunTime,
+                    clearTimeMs: clearMs,
+                    bestTimeSeconds: updatedProg.dailyBestTimeMs / 1000,
+                    bestTimeMs: updatedProg.dailyBestTimeMs,
+                    coinsCollected: coinsEarned,
+                    totalCoinsInLevel: eng.maze.coins.length,
+                    secretsFound: eng.player.secretsFoundThisRun,
+                    damageTaken: eng.damageTakenThisRun,
+                    hpRemaining: eng.player.hp,
+                    distanceProgressPct: 100,
+                    canRespawnAtCheckpoint: false,
+                    isDailyChallenge: true,
+                    dailyDateKey: eng.dailyDateKey,
+                    dailySeedCode: getDailySeedCode(eng.dailyDateKey),
+                  });
+                  setGameState('gameover');
+                  return;
+                }
+
                 const updatedProg = recordLevelCompletion(
                   progressRef.current,
                   eng.currentLevel,
@@ -632,6 +867,14 @@ export default function App() {
                   eng.player.coinsEarnedThisRun + 5
                 );
                 setProgress(updatedProg);
+
+                const activeUser = currentUserRef.current;
+                if (activeUser) {
+                  setCloudSyncStatus('syncing');
+                  syncUserProgressToCloud(activeUser, updatedProg)
+                    .then(() => setCloudSyncStatus('synced'))
+                    .catch(() => setCloudSyncStatus('error'));
+                }
 
                 const bestTime =
                   updatedProg.levelBestTimes[eng.currentLevel] ?? eng.elapsedRunTime;
@@ -673,8 +916,13 @@ export default function App() {
                   chapterTitle: eng.maze.config.chapterTitle,
                   outcome: 'game_over',
                   clearTimeSeconds: eng.elapsedRunTime,
+                  clearTimeMs: Math.round(eng.elapsedRunTime * 1000),
                   bestTimeSeconds:
                     progressRef.current.levelBestTimes[eng.currentLevel] ?? 0,
+                  bestTimeMs:
+                    progressRef.current.dailyBestDate === eng.dailyDateKey
+                      ? progressRef.current.dailyBestTimeMs
+                      : 0,
                   coinsCollected: eng.player.coinsEarnedThisRun,
                   totalCoinsInLevel: eng.maze.coins.length,
                   secretsFound: eng.player.secretsFoundThisRun,
@@ -682,6 +930,9 @@ export default function App() {
                   hpRemaining: 0,
                   distanceProgressPct: pct,
                   canRespawnAtCheckpoint: eng.player.checkpointPos !== null,
+                  isDailyChallenge: eng.isDailyChallenge,
+                  dailyDateKey: eng.dailyDateKey,
+                  dailySeedCode: getDailySeedCode(eng.dailyDateKey),
                 });
                 setGameState('gameover');
               },
@@ -784,25 +1035,30 @@ export default function App() {
     if (!item) return;
     const isUnlocked = progress.unlockedCosmetics.includes(itemId);
 
+    let updated: SavedProgress | null = null;
     if (isUnlocked) {
-      const updated: SavedProgress = {
+      updated = {
         ...progress,
         equippedSkin: item.category === 'skin' ? itemId : progress.equippedSkin,
         equippedTrail: item.category === 'trail' ? itemId : progress.equippedTrail,
       };
-      setProgress(updated);
-      saveProgress(updated);
     } else if (progress.coins >= item.cost) {
-      const updated: SavedProgress = {
+      updated = {
         ...progress,
         coins: progress.coins - item.cost,
         unlockedCosmetics: [...progress.unlockedCosmetics, itemId],
         equippedSkin: item.category === 'skin' ? itemId : progress.equippedSkin,
         equippedTrail: item.category === 'trail' ? itemId : progress.equippedTrail,
       };
+      audioManager.playPowerUpPickup();
+    }
+
+    if (updated) {
       setProgress(updated);
       saveProgress(updated);
-      audioManager.playPowerUpPickup();
+      if (currentUser) {
+        syncUserProgressToCloud(currentUser, updated).catch(() => {});
+      }
     }
   };
 
@@ -824,9 +1080,15 @@ export default function App() {
       {gameState === 'title' && subMenu === 'none' && (
         <TitleScreen
           progress={progress}
+          todayDateKey={todayDateKey}
+          currentUserUid={currentUser?.uid || null}
+          currentUserName={currentUser?.displayName || null}
+          cloudSyncStatus={cloudSyncStatus}
           onStartNewOrSelected={(lvl) => startLevel(lvl, false)}
           onContinue={() => startLevel(progress.highestUnlockedLevel, false)}
+          onStartDailyChallenge={startDailyChallenge}
           onOpenSubMenu={(menu) => setSubMenu(menu)}
+          onSignInWithGoogle={handleSignInWithGoogle}
         />
       )}
 
@@ -835,6 +1097,22 @@ export default function App() {
         <LevelSelectModal
           progress={progress}
           onSelectLevel={(lvl) => startLevel(lvl, false)}
+          onClose={() => setSubMenu('none')}
+        />
+      )}
+
+      {subMenu === 'daily_challenge' && (
+        <DailyChallengeModal
+          dateKey={todayDateKey}
+          progress={progress}
+          leaderboard={mergedDailyLeaderboard}
+          currentUserUid={currentUser?.uid || null}
+          currentUserName={currentUser?.displayName || null}
+          isSigningIn={isSigningIn}
+          cloudSyncStatus={cloudSyncStatus}
+          onStartDailyChallenge={startDailyChallenge}
+          onSignInWithGoogle={handleSignInWithGoogle}
+          onSignOut={handleSignOut}
           onClose={() => setSubMenu('none')}
         />
       )}
@@ -881,7 +1159,13 @@ export default function App() {
             audioManager.stopAmbient();
             setGameState('paused');
           }}
-          onRestart={() => startLevel(engineRef.current?.currentLevel || 1, true)}
+          onRestart={() => {
+            if (engineRef.current?.isDailyChallenge) {
+              startDailyChallenge();
+            } else {
+              startLevel(engineRef.current?.currentLevel || 1, true);
+            }
+          }}
           onTouchVectorChange={(vx, vy, sprinting) => {
             if (engineRef.current) {
               engineRef.current.touchVx = vx;
@@ -899,13 +1183,18 @@ export default function App() {
           gameState={gameState}
           summary={runSummary}
           currentLevel={engineRef.current?.currentLevel || 1}
+          isDailyChallenge={engineRef.current?.isDailyChallenge}
           onResume={() => {
             audioManager.startAmbient(engineRef.current?.isNight || false);
             setGameState('playing');
           }}
-          onRestartLevel={() =>
-            startLevel(engineRef.current?.currentLevel || 1, true)
-          }
+          onRestartLevel={() => {
+            if (engineRef.current?.isDailyChallenge) {
+              startDailyChallenge();
+            } else {
+              startLevel(engineRef.current?.currentLevel || 1, true);
+            }
+          }}
           onRespawnCheckpoint={handleRespawnAtCheckpoint}
           onNextLevel={() =>
             startLevel(
@@ -913,6 +1202,7 @@ export default function App() {
               false
             )
           }
+          onOpenDailyLeaderboard={() => setSubMenu('daily_challenge')}
           onOpenSettings={() => setSubMenu('settings')}
           onReturnToTitle={() => {
             audioManager.stopAmbient();

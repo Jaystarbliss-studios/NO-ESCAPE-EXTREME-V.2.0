@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CHAPTERS, getChapterForLevel, getLevelConfig } from './chapters';
+import {
+  getBaselineDailyLeaderboard,
+  getDailyChallengeConfig,
+  mergeLeaderboardEntries,
+} from './dailyChallenge';
 import { bfsShortestPath, generateMaze, validateMazeLayout } from './mazeGenerator';
 import {
   castRayToWall,
@@ -151,5 +156,36 @@ test('enemy scanning light rays and line-of-sight never pass through solid wall 
     'Enemy scanning light MUST detect player when in direct unobstructed corridor sight'
   );
 });
+
+test('Daily Challenge generates deterministic, identical solvable maze for the same date and distinct mazes across dates', () => {
+  const cfgA1 = getDailyChallengeConfig('2026-11-13');
+  const cfgA2 = getDailyChallengeConfig('2026-11-13');
+  const cfgB = getDailyChallengeConfig('2026-11-14');
+
+  assert.equal(cfgA1.seed, cfgA2.seed, 'Same date must produce identical seed');
+  assert.notEqual(cfgA1.seed, cfgB.seed, 'Different dates must produce distinct seeds');
+
+  const mazeA1 = generateMaze(cfgA1);
+  const mazeA2 = generateMaze(cfgA2);
+  assert.deepEqual(mazeA1.grid, mazeA2.grid, 'Daily Challenge maze layout must be 100% identical for all players on the same date');
+  assert.equal(validateMazeLayout(mazeA1).valid, true, 'Daily Challenge maze must be valid and solvable');
+
+  const baseline = getBaselineDailyLeaderboard('2026-11-13');
+  assert.equal(baseline.length, 5);
+  const merged = mergeLeaderboardEntries(
+    [],
+    baseline,
+    {
+      dateKey: '2026-11-13',
+      clearTimeMs: 15200,
+      displayName: 'SpeedrunnerOne',
+      skinId: 'skin_solar',
+      uid: 'user_test_1',
+    }
+  );
+  assert.equal(merged[0].displayName, 'SpeedrunnerOne');
+  assert.equal(merged[0].clearTimeMs, 15200);
+});
+
 
 

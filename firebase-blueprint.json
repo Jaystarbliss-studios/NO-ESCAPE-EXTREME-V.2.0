@@ -1,0 +1,183 @@
+{
+  "entities": {
+    "UserProgress": {
+      "title": "UserProgress",
+      "description": "Cloud-synced campaign progress, cosmetics, and daily challenge personal best for an authenticated player.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The authenticated Firebase user UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Public display callsign of the player (no PII email/phone).",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "highestUnlockedLevel": {
+          "type": "integer",
+          "description": "Highest unlocked campaign sector (1 to 100)."
+        },
+        "completedLevels": {
+          "type": "array",
+          "description": "Bounded list of completed campaign level numbers (up to 100)."
+        },
+        "coins": {
+          "type": "integer",
+          "description": "Total coins in player vault."
+        },
+        "unlockedCosmetics": {
+          "type": "array",
+          "description": "Bounded list of unlocked cosmetic IDs (up to 20)."
+        },
+        "equippedSkin": {
+          "type": "string",
+          "description": "Currently equipped player skin ID.",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "equippedTrail": {
+          "type": "string",
+          "description": "Currently equipped movement trail ID.",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "equippedPortalStyle": {
+          "type": "string",
+          "description": "Currently equipped portal style ID.",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "dailyBestDate": {
+          "type": "string",
+          "description": "UTC date string (YYYY-MM-DD) of the player's latest daily challenge completion.",
+          "minLength": 0,
+          "maxLength": 10
+        },
+        "dailyBestTimeMs": {
+          "type": "integer",
+          "description": "Player's best completion time in milliseconds for dailyBestDate."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the profile was first created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the profile was last synced."
+        }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "highestUnlockedLevel",
+        "completedLevels",
+        "coins",
+        "unlockedCosmetics",
+        "equippedSkin",
+        "equippedTrail",
+        "equippedPortalStyle",
+        "dailyBestDate",
+        "dailyBestTimeMs",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "DailyLeaderboardEntry": {
+      "title": "DailyLeaderboardEntry",
+      "description": "A player's fastest completion time for a specific UTC date's Daily Challenge seeded maze.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The authenticated Firebase user UID who achieved this run.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Player callsign shown on the global leaderboard.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "dateKey": {
+          "type": "string",
+          "description": "UTC date key in YYYY-MM-DD format.",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Deterministic 32-bit maze seed for that date."
+        },
+        "clearTimeMs": {
+          "type": "integer",
+          "description": "Completion time in milliseconds (1000 to 3600000)."
+        },
+        "coinsCollected": {
+          "type": "integer",
+          "description": "Coins collected during the winning run (0 to 500)."
+        },
+        "damageTaken": {
+          "type": "integer",
+          "description": "Hits taken during the winning run (0 to 100)."
+        },
+        "skinId": {
+          "type": "string",
+          "description": "Equipped skin ID used on the run.",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Explicit boolean flag (always true) enforced by list security rules."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when entry was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when entry was last updated."
+        }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "dateKey",
+        "seed",
+        "clearTimeMs",
+        "coinsCollected",
+        "damageTaken",
+        "skinId",
+        "isPublic",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProgress"
+      },
+      "description": "Stores private cloud-synced campaign progress and cosmetics per authenticated user."
+    },
+    "/dailyLeaderboards/{entryId}": {
+      "schema": {
+        "$ref": "#/entities/DailyLeaderboardEntry"
+      },
+      "description": "Stores global Daily Challenge completion times indexed by entryId ({dateKey}_{uid})."
+    }
+  }
+}

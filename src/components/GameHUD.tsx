@@ -33,6 +33,9 @@ export interface HudSnapshot {
   checkpointReached: boolean;
   statusBanner: string | null;
   pickupNotification: PickupNotification | null;
+  isDailyChallenge?: boolean;
+  dailyDateKey?: string;
+  elapsedRunTimeSec?: number;
 }
 
 interface GameHUDProps {
@@ -224,17 +227,19 @@ export const GameHUD: React.FC<GameHUDProps> = ({
       {/* TOP BAR + NON-INTRUSIVE FLOATING TOAST */}
       <div className="w-full flex flex-col items-center gap-1">
         <div className="w-full flex items-start justify-between gap-1.5">
-          {/* TOP LEFT: Compact Level, Chapter & Objective */}
-          <div className="bg-[#171717]/82 border border-[#FFF7E6]/15 rounded px-2 py-1 max-w-[145px] sm:max-w-xs shadow">
+          {/* TOP LEFT: Compact Level/Daily, Chapter & Objective */}
+          <div className="bg-[#171717]/82 border border-[#FFF7E6]/15 rounded px-2 py-1 max-w-[165px] sm:max-w-xs shadow">
             <div className="flex items-center gap-1.5">
               <span className="font-display text-xs sm:text-sm font-extrabold text-[#FFD43B] font-mono-tabular leading-none">
-                LV {hud.level}
+                {hud.isDailyChallenge ? 'DAILY' : `LV ${hud.level}`}
               </span>
               <span className="text-[#999999] text-[9px]" aria-hidden="true">
                 ·
               </span>
               <span className="text-[8px] sm:text-[10px] font-mono-tabular font-bold uppercase tracking-wider text-[#FFF7E6] truncate">
-                CH {hud.chapterNumber}: {hud.chapterTitle}
+                {hud.isDailyChallenge
+                  ? `${(hud.elapsedRunTimeSec ?? 0).toFixed(1)}s`
+                  : `CH ${hud.chapterNumber}: ${hud.chapterTitle}`}
               </span>
             </div>
 

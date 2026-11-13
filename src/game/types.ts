@@ -3,6 +3,7 @@ export type GameState = 'title' | 'playing' | 'paused' | 'gameover';
 export type SubMenuState =
   | 'none'
   | 'levels'
+  | 'daily_challenge'
   | 'how_to_play'
   | 'settings'
   | 'cosmetics'
@@ -303,7 +304,22 @@ export interface SavedProgress {
   equippedSkin: string;
   equippedTrail: string;
   equippedPortalStyle: string;
+  dailyBestDate: string;
+  dailyBestTimeMs: number;
   settings: GameSettings;
+}
+
+export interface DailyLeaderboardRecord {
+  id: string;
+  uid: string;
+  displayName: string;
+  dateKey: string;
+  seed: number;
+  clearTimeMs: number;
+  coinsCollected: number;
+  damageTaken: number;
+  skinId: string;
+  isLiveCloud?: boolean;
 }
 
 export interface RunSummarySnapshot {
@@ -311,7 +327,9 @@ export interface RunSummarySnapshot {
   chapterTitle: string;
   outcome: EndOutcome;
   clearTimeSeconds: number;
+  clearTimeMs?: number;
   bestTimeSeconds: number;
+  bestTimeMs?: number;
   coinsCollected: number;
   totalCoinsInLevel: number;
   secretsFound: number;
@@ -319,4 +337,7 @@ export interface RunSummarySnapshot {
   hpRemaining: number;
   distanceProgressPct: number;
   canRespawnAtCheckpoint: boolean;
+  isDailyChallenge?: boolean;
+  dailyDateKey?: string;
+  dailySeedCode?: string;
 }

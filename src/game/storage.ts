@@ -27,6 +27,8 @@ export const DEFAULT_PROGRESS: SavedProgress = {
   equippedSkin: 'skin_default',
   equippedTrail: 'trail_ember',
   equippedPortalStyle: 'default',
+  dailyBestDate: '',
+  dailyBestTimeMs: 0,
   settings: { ...DEFAULT_SETTINGS },
 };
 
@@ -60,6 +62,8 @@ export function loadSavedProgress(): SavedProgress {
       equippedSkin: parsed.equippedSkin ?? 'skin_default',
       equippedTrail: parsed.equippedTrail ?? 'trail_ember',
       equippedPortalStyle: parsed.equippedPortalStyle ?? 'default',
+      dailyBestDate: typeof parsed.dailyBestDate === 'string' ? parsed.dailyBestDate.slice(0, 10) : '',
+      dailyBestTimeMs: typeof parsed.dailyBestTimeMs === 'number' && parsed.dailyBestTimeMs >= 0 ? Math.round(parsed.dailyBestTimeMs) : 0,
       settings: {
         ...DEFAULT_SETTINGS,
         ...rawSettings,
@@ -110,6 +114,82 @@ export function recordLevelCompletion(
 
   saveProgress(updated);
   return updated;
+}
+
+export function recordDailyCompletion(
+  current: SavedProgress,
+  dateKey: string,
+  clearTimeMs: number,
+  coinsEarned: number
+): SavedProgress {
+  const roundedMs = Math.max(1000, Math.round(clearTimeMs));
+  const isSameDate = current.dailyBestDate === dateKey;
+  const bestMs =
+    isSameDate && current.dailyBestTimeMs > 0
+      ? Math.min(current.dailyBestTimeMs, roundedMs)
+      : roundedMs;
+
+  const updated: SavedProgress = {
+    ...current,
+    dailyBestDate: dateKey,
+    dailyBestTimeMs: bestMs,
+    coins: current.coins + Math.max(0, Math.floor(coinsEarned)),
+  };
+
+  saveProgress(updated);
+  return updated;
+}
+
+export function mergeCloudProgressWithLocal(
+  local: SavedProgress,
+  cloud: Partial<SavedProgress>
+): SavedProgress {
+  const completedSet = new Set([
+    ...local.completedLevels,
+    ...(Array.isArray(cloud.completedLevels) ? cloud.completedLevels : []),
+  ]);
+  const unlockedCosmeticsSet = new Set([
+    'skin_default',
+    'trail_ember',
+    ...local.unlockedCosmetics,
+    ...(Array.isArray(cloud.unlockedCosmetics) ? cloud.unlockedCosmetics : []),
+  ]);
+
+  let dailyBestDate = local.dailyBestDate;
+  let dailyBestTimeMs = local.dailyBestTimeMs;
+  if (cloud.dailyBestDate && cloud.dailyBestTimeMs && cloud.dailyBestTimeMs > 0) {
+    if (!dailyBestDate || cloud.dailyBestDate > dailyBestDate) {
+      dailyBestDate = cloud.dailyBestDate;
+      dailyBestTimeMs = cloud.dailyBestTimeMs;
+    } else if (cloud.dailyBestDate === dailyBestDate) {
+      dailyBestTimeMs =
+        dailyBestTimeMs > 0
+          ? Math.min(dailyBestTimeMs, cloud.dailyBestTimeMs)
+          : cloud.dailyBestTimeMs;
+    }
+  }
+
+  const merged: SavedProgress = {
+    ...local,
+    highestUnlockedLevel: Math.min(
+      100,
+      Math.max(local.highestUnlockedLevel, cloud.highestUnlockedLevel ?? 1)
+    ),
+    completedLevels: Array.from(completedSet)
+      .filter((n) => Number.isInteger(n) && n >= 1 && n <= 100)
+      .sort((a, b) => a - b)
+      .slice(0, 100),
+    coins: Math.max(local.coins, cloud.coins ?? 0),
+    unlockedCosmetics: Array.from(unlockedCosmeticsSet).slice(0, 20),
+    equippedSkin: cloud.equippedSkin || local.equippedSkin,
+    equippedTrail: cloud.equippedTrail || local.equippedTrail,
+    equippedPortalStyle: cloud.equippedPortalStyle || local.equippedPortalStyle,
+    dailyBestDate,
+    dailyBestTimeMs,
+  };
+
+  saveProgress(merged);
+  return merged;
 }
 
 export function resetAllProgress(): SavedProgress {
