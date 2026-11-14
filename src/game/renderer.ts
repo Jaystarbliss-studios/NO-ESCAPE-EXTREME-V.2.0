@@ -96,6 +96,7 @@ export interface RenderContextState {
   equippedSkinId: string;
   equippedTrailId: string;
   isTitleCameraTour: boolean;
+  playerAutoPath?: { x: number; y: number }[];
 }
 
 export class MazeRenderer {
@@ -248,6 +249,21 @@ export class MazeRenderer {
           }
         }
       }
+    }
+
+    // Render Auto-Path Line if active
+    if (state.playerAutoPath && state.playerAutoPath.length > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(player.x * tileSize, player.y * tileSize);
+      for (const pt of state.playerAutoPath) {
+        ctx.lineTo((pt.x + 0.5) * tileSize, (pt.y + 0.5) * tileSize);
+      }
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = 'rgba(255, 212, 59, 0.82)';
+      ctx.setLineDash([8, 6]);
+      ctx.stroke();
+      ctx.restore();
     }
 
     // 2. Render Checkpoint (with 2.5D pedestal)

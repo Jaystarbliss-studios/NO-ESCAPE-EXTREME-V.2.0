@@ -202,6 +202,7 @@ export interface PlayerEntity {
   coinsEarnedThisRun: number;
   secretsFoundThisRun: number;
   checkpointPos: GridCoord | null;
+  playerAutoPath?: GridCoord[];
 }
 
 export interface ChapterInfo {

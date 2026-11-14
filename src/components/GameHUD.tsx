@@ -435,99 +435,18 @@ export const GameHUD: React.FC<GameHUDProps> = ({
         </div>
       </div>
 
-      {/* BOTTOM BAR: 50%-SCALED MOBILE TOUCH CONTROLS & COMPACT POWER-UP DOCK */}
+      {/* BOTTOM BAR: COMPACT MINIMALIST POWER-UP DOCK & TOUCH SPRINT/USE */}
       <div className="w-full flex items-end justify-between gap-1.5">
-        {settings.touchLayout === 'joystick' && (
-          <div
-            ref={joystickRef}
-            onPointerDown={(e) => {
-              e.currentTarget.setPointerCapture(e.pointerId);
-              handleJoystickMove(e.clientX, e.clientY);
-            }}
-            onPointerMove={(e) => {
-              if (e.buttons > 0) handleJoystickMove(e.clientX, e.clientY);
-            }}
-            onPointerUp={handleJoystickEnd}
-            onPointerCancel={handleJoystickEnd}
-            className="md:hidden relative w-14 h-14 rounded-full bg-[#171717]/45 border border-[#FFF7E6]/25 flex items-center justify-center pointer-events-auto touch-none shrink-0"
-          >
-            <div
-              className="w-6 h-6 rounded-full bg-[#E52B2B]/85 border border-[#FFD43B] shadow"
-              style={{
-                transform: `translate(${knobOffset.x}px, ${knobOffset.y}px)`,
-              }}
-            />
-          </div>
-        )}
+        <div className="w-12 hidden md:block" />
 
-        {settings.touchLayout === 'dpad' && (
-          <div className="md:hidden grid grid-cols-3 gap-0.5 w-16 h-16 pointer-events-auto touch-none shrink-0">
-            <div />
-            <button
-              type="button"
-              aria-label="Move Up"
-              onPointerDown={() => onTouchVectorChange(0, -1, touchSprint)}
-              onPointerUp={() => onTouchVectorChange(0, 0, touchSprint)}
-              className="bg-[#171717]/55 border border-[#FFF7E6]/20 rounded flex items-center justify-center text-[#FFD43B] text-[9px] font-bold"
-            >
-              ▲
-            </button>
-            <div />
-            <button
-              type="button"
-              aria-label="Move Left"
-              onPointerDown={() => onTouchVectorChange(-1, 0, touchSprint)}
-              onPointerUp={() => onTouchVectorChange(0, 0, touchSprint)}
-              className="bg-[#171717]/55 border border-[#FFF7E6]/20 rounded flex items-center justify-center text-[#FFD43B] text-[9px] font-bold"
-            >
-              ◀
-            </button>
-            <div />
-            <button
-              type="button"
-              aria-label="Move Right"
-              onPointerDown={() => onTouchVectorChange(1, 0, touchSprint)}
-              onPointerUp={() => onTouchVectorChange(0, 0, touchSprint)}
-              className="bg-[#171717]/55 border border-[#FFF7E6]/20 rounded flex items-center justify-center text-[#FFD43B] text-[9px] font-bold"
-            >
-              ▶
-            </button>
-            <div />
-            <button
-              type="button"
-              aria-label="Move Down"
-              onPointerDown={() => onTouchVectorChange(0, 1, touchSprint)}
-              onPointerUp={() => onTouchVectorChange(0, 0, touchSprint)}
-              className="bg-[#171717]/55 border border-[#FFF7E6]/20 rounded flex items-center justify-center text-[#FFD43B] text-[9px] font-bold"
-            >
-              ▼
-            </button>
-            <div />
-          </div>
-        )}
-
-        {/* COMPACT 50%-SCALED POWER-UP DOCK (Shows collected items & exact usage instructions) */}
+        {/* MINIMALIST POWER-UP DOCK (Icon + Count badge + Shortcut key) */}
         <div className="mx-auto flex flex-col items-center gap-0.5 pointer-events-auto max-w-full overflow-hidden">
-          <div className="flex items-center gap-1.5 text-[7px] sm:text-[9px] font-mono-tabular uppercase tracking-wider text-[#FFF7E6]/70 bg-[#171717]/65 px-2 py-0.5 rounded border border-[#FFF7E6]/10">
-            <span>
-              <strong className="text-[#FFD43B]">Tap</strong> or{' '}
-              <strong className="text-[#FFD43B]">[1–6] / [Space] / [E]</strong> to Use
-            </span>
-            <span className="hidden sm:inline">·</span>
-            <span className="hidden sm:inline">
-              <strong className="text-[#FFD43B]">[Q]</strong> Cycle
-            </span>
-            <span>·</span>
-            <span className="text-[#22C55E]">Scanner = Night Only</span>
-          </div>
-
-          <div className="bg-[#171717]/82 border border-[#FFF7E6]/15 rounded px-1 py-1 flex items-center gap-1 shadow-lg overflow-x-auto max-w-full">
+          <div className="bg-[#171717]/85 border border-[#FFF7E6]/15 rounded-lg px-1.5 py-1 flex items-center gap-1.5 shadow-lg overflow-x-auto max-w-full">
             {POWERUP_SLOTS.map((item, idx) => {
               const count = hud.inventoryCounts[item.type] || 0;
               const activeState = hud.activeAbilities.find((a) => a.type === item.type);
               const isAvailable = count > 0;
               const isSelected = hud.selectedSlot === idx;
-              const isScannerBlockedByDay = item.type === 'scanner' && !hud.isNight;
 
               return (
                 <button
@@ -539,13 +458,13 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                     e.currentTarget.blur();
                     if (isAvailable) onActivatePowerUp(item.type);
                   }}
-                  aria-label={`${item.shortName} (${item.roleHint}) - Shortcut [${item.keyHint}] - Stock: ${count}`}
-                  className={`relative flex flex-col items-start px-1.5 py-0.5 rounded border text-left transition-colors min-w-[46px] sm:min-w-[64px] ${
+                  aria-label={`${item.shortName} - Shortcut [${item.keyHint}] - Stock: ${count}`}
+                  className={`relative flex flex-col items-center justify-center p-1.5 rounded-lg border transition-all min-w-[38px] sm:min-w-[44px] h-[40px] sm:h-[46px] ${
                     activeState
-                      ? 'bg-[#2B2210] border-[#FFD43B] text-[#FFF7E6]'
+                      ? 'bg-[#2B2210] border-[#FFD43B] text-[#FFF7E6] scale-105'
                       : isAvailable
                       ? 'bg-[#252525]/90 hover:bg-[#323232] text-[#FFF7E6] cursor-pointer'
-                      : 'bg-[#171717]/60 border-[#FFF7E6]/10 text-[#999999]/45 cursor-not-allowed'
+                      : 'bg-[#171717]/60 border-[#FFF7E6]/10 text-[#999999]/35 cursor-not-allowed opacity-60'
                   }`}
                   style={{
                     borderColor: activeState
@@ -556,67 +475,57 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                       ? `${item.color}88`
                       : undefined,
                     boxShadow:
-                      isSelected && isAvailable ? `0 0 0 1px ${item.color}` : undefined,
+                      isSelected && isAvailable ? `0 0 0 1.5px ${item.color}` : undefined,
                   }}
                 >
-                  <div className="flex items-center justify-between w-full text-[7px] sm:text-[8px] font-mono-tabular leading-none">
-                    <span className="text-[#FFF7E6]/80 font-bold">
-                      [{item.keyHint}]{isSelected && isAvailable ? '★' : ''}
-                    </span>
-                    <span
-                      className="font-bold"
-                      style={{ color: count > 0 ? item.color : 'rgba(153,153,153,0.4)' }}
-                    >
-                      x{count}
-                    </span>
+                  <div className="absolute top-0.5 left-1 text-[7px] sm:text-[8px] font-mono-tabular font-bold text-[#FFF7E6]/70 leading-none">
+                    {item.keyHint}
                   </div>
-                  <div className="flex items-center gap-0.5 mt-0.5">
+                  <div className="absolute top-0.5 right-1 text-[7px] sm:text-[8px] font-mono-tabular font-bold leading-none" style={{ color: count > 0 ? item.color : '#666' }}>
+                    x{count}
+                  </div>
+
+                  <div className="mt-1 flex items-center justify-center">
                     <PowerUpSlotIcon
                       type={item.type}
-                      color={count > 0 || activeState ? item.color : '#666666'}
+                      color={count > 0 || activeState ? item.color : '#555555'}
                     />
-                    <div className="font-display text-[9px] sm:text-[11px] font-bold uppercase tracking-wide leading-none">
-                      {item.shortName}
+                  </div>
+
+                  {activeState && (
+                    <div className="absolute bottom-0.5 text-[6px] sm:text-[7px] font-mono-tabular font-bold text-[#FFD43B] leading-none">
+                      {activeState.remaining.toFixed(0)}s
                     </div>
-                  </div>
-                  <div className="text-[6.5px] sm:text-[8px] text-[#999999] truncate w-full leading-tight mt-0.5">
-                    {activeState
-                      ? `${activeState.remaining.toFixed(1)}s ON`
-                      : isScannerBlockedByDay && count > 0
-                      ? 'Night Only'
-                      : item.roleHint}
-                  </div>
+                  )}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {settings.touchLayout !== 'off' && (
-          <div className="md:hidden flex flex-col gap-1 pointer-events-auto shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                const next = !touchSprint;
-                setTouchSprint(next);
-              }}
-              className={`px-2 py-1 rounded border text-[9px] font-bold uppercase ${
-                touchSprint
-                  ? 'bg-[#FFD43B] text-[#171717] border-[#FFD43B]'
-                  : 'bg-[#171717]/65 text-[#FFF7E6] border-[#FFF7E6]/25'
-              }`}
-            >
-              Sprint
-            </button>
-            <button
-              type="button"
-              onClick={onUsePrimaryAbility}
-              className="px-2 py-1 rounded bg-[#E52B2B]/85 text-[#FFF7E6] border border-[#FFD43B] text-[9px] font-bold uppercase"
-            >
-              Use
-            </button>
-          </div>
-        )}
+        <div className="flex flex-col gap-1 pointer-events-auto shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              const next = !touchSprint;
+              setTouchSprint(next);
+            }}
+            className={`px-2.5 py-1 rounded border text-[9px] font-bold uppercase ${
+              touchSprint
+                ? 'bg-[#FFD43B] text-[#171717] border-[#FFD43B]'
+                : 'bg-[#171717]/65 text-[#FFF7E6] border-[#FFF7E6]/25'
+            }`}
+          >
+            Sprint
+          </button>
+          <button
+            type="button"
+            onClick={onUsePrimaryAbility}
+            className="px-2.5 py-1 rounded bg-[#E52B2B]/85 text-[#FFF7E6] border border-[#FFD43B] text-[9px] font-bold uppercase"
+          >
+            Use
+          </button>
+        </div>
       </div>
     </div>
   );
