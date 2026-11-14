@@ -10,7 +10,7 @@ import {
   getTodayDateKey,
   mergeLeaderboardEntries,
 } from './game/dailyChallenge';
-import { generateMaze, isTileWalkable } from './game/mazeGenerator';
+import { generateMaze, isTileWalkable, bfsShortestPath } from './game/mazeGenerator';
 import { updateEnemyAI } from './game/pathfinding';
 import { ParticlePool } from './game/particlePool';
 import { MazeRenderer, POWERUP_VISUAL_CONFIG } from './game/renderer';
@@ -81,6 +81,7 @@ interface EngineMutableState {
   touchVx: number;
   touchVy: number;
   touchSprint: boolean;
+  lastIntersectionChecked?: { x: number; y: number };
 }
 
 function createInitialPlayer(maze: GeneratedMaze): PlayerEntity {
@@ -323,6 +324,87 @@ export default function App() {
       await signOutUser();
     } catch {
       // Ignore sign-out errors
+    }
+  }, []);
+
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+
+  const handleCanvasPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    touchStartRef.current = { x: e.clientX, y: e.clientY, time: performance.now() };
+  }, []);
+
+  const handleCanvasPointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!touchStartRef.current || !canvasRef.current || !engineRef.current) return;
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    const dist = Math.hypot(dx, dy);
+    const dt = performance.now() - start.time;
+
+    const eng = engineRef.current;
+    const canvas = canvasRef.current;
+    if (eng.gameState !== 'playing') return;
+
+    if (dist > 20 && dt < 800) {
+      if (Math.abs(dx) > Math.abs(dy)) {
+        eng.touchVx = dx > 0 ? 1 : -1;
+        eng.touchVy = 0;
+      } else {
+        eng.touchVx = 0;
+        eng.touchVy = dy > 0 ? 1 : -1;
+      }
+      eng.player.playerAutoPath = undefined;
+      audioManager.playFootstep(false);
+      return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const clickScreenX = e.clientX - rect.left;
+    const clickScreenY = e.clientY - rect.top;
+
+    const minDim = Math.min(canvas.width, canvas.height);
+    const isMobileViewport = canvas.width < 640;
+    const tileSize = isMobileViewport
+      ? Math.max(26, Math.min(42, Math.floor(minDim / 11.8)))
+      : Math.max(38, Math.min(64, Math.floor(minDim / 11.5)));
+
+    const mazePxW = eng.maze.width * tileSize;
+    const mazePxH = eng.maze.height * tileSize;
+    const padX = isMobileViewport ? 16 : 64;
+    const padTop = isMobileViewport ? 44 : 72;
+    const padBottom = isMobileViewport ? 62 : 84;
+
+    let baseOffsetX = canvas.width / 2 - eng.cameraX * tileSize;
+    if (mazePxW <= canvas.width - padX * 2) baseOffsetX = (canvas.width - mazePxW) / 2;
+    let baseOffsetY = canvas.height / 2 - eng.cameraY * tileSize;
+    if (mazePxH <= canvas.height - (padTop + padBottom)) baseOffsetY = (canvas.height - mazePxH) / 2;
+
+    const worldX = (clickScreenX - baseOffsetX) / tileSize;
+    const worldY = (clickScreenY - baseOffsetY) / tileSize;
+    const targetGx = Math.floor(worldX);
+    const targetGy = Math.floor(worldY);
+
+    if (
+      targetGy >= 0 &&
+      targetGy < eng.maze.height &&
+      targetGx >= 0 &&
+      targetGx < eng.maze.width
+    ) {
+      const startCoord = { x: Math.floor(eng.player.x), y: Math.floor(eng.player.y) };
+      const goalCoord = { x: targetGx, y: targetGy };
+      const path = bfsShortestPath(eng.maze.grid, startCoord, goalCoord, {
+        isNight: eng.isNight,
+        unlockedDoors: eng.unlockedDoors,
+        treatLockedDoorsAsOpen: true,
+      });
+
+      if (path && path.length > 0) {
+        eng.touchVx = 0;
+        eng.touchVy = 0;
+        eng.player.playerAutoPath = path;
+        audioManager.playFootstep(false);
+      }
     }
   }, []);
 
@@ -1073,7 +1155,9 @@ export default function App() {
       <canvas
         ref={canvasRef}
         data-testid="maze-canvas"
-        className="block w-full h-full"
+        className="block w-full h-full cursor-crosshair"
+        onPointerDown={handleCanvasPointerDown}
+        onPointerUp={handleCanvasPointerUp}
       />
 
       {/* TITLE SCREEN OVERLAY */}
@@ -1309,14 +1393,73 @@ function updateGameplayStep(
     }
   }
 
-  // 3. Player Input & Smooth Wall-Sliding Movement
-  let ix = eng.touchVx;
-  let iy = eng.touchVy;
+  // 3. Player Input, Tap-to-Navigate Auto-Path & Swipe Movement with Intersection Stopping
+  let ix = 0;
+  let iy = 0;
 
   if (keysHeld.has('KeyW') || keysHeld.has('ArrowUp')) iy -= 1;
   if (keysHeld.has('KeyS') || keysHeld.has('ArrowDown')) iy += 1;
   if (keysHeld.has('KeyA') || keysHeld.has('ArrowLeft')) ix -= 1;
   if (keysHeld.has('KeyD') || keysHeld.has('ArrowRight')) ix += 1;
+
+  if (ix !== 0 || iy !== 0) {
+    p.playerAutoPath = undefined;
+    eng.touchVx = 0;
+    eng.touchVy = 0;
+  }
+
+  if (p.playerAutoPath && p.playerAutoPath.length > 0) {
+    const targetWaypoint = p.playerAutoPath[0];
+    const targetX = targetWaypoint.x + 0.5;
+    const targetY = targetWaypoint.y + 0.5;
+    const distToWp = Math.hypot(targetX - p.x, targetY - p.y);
+
+    if (distToWp < 0.12) {
+      p.playerAutoPath.shift();
+      if (p.playerAutoPath.length === 0) {
+        p.playerAutoPath = undefined;
+      }
+    } else {
+      ix = targetX > p.x ? 1 : targetX < p.x ? -1 : 0;
+      iy = targetY > p.y ? 1 : targetY < p.y ? -1 : 0;
+      const mag = Math.hypot(ix, iy);
+      if (mag > 0) {
+        ix /= mag;
+        iy /= mag;
+      }
+    }
+  } else if (eng.touchVx !== 0 || eng.touchVy !== 0) {
+    ix = eng.touchVx;
+    iy = eng.touchVy;
+
+    const currentGx = Math.floor(p.x);
+    const currentGy = Math.floor(p.y);
+    const centerDist = Math.hypot(p.x - (currentGx + 0.5), p.y - (currentGy + 0.5));
+
+    if (centerDist < 0.22) {
+      if (!eng.lastIntersectionChecked || eng.lastIntersectionChecked.x !== currentGx || eng.lastIntersectionChecked.y !== currentGy) {
+        eng.lastIntersectionChecked = { x: currentGx, y: currentGy };
+        const dirs = [{dx:1, dy:0}, {dx:-1, dy:0}, {dx:0, dy:1}, {dx:0, dy:-1}];
+        let openCount = 0;
+        for (const d of dirs) {
+          const nx = currentGx + d.dx;
+          const ny = currentGy + d.dy;
+          if (ny >= 0 && ny < eng.maze.grid.length && nx >= 0 && nx < eng.maze.grid[0].length) {
+            if (isTileWalkable(eng.maze.grid[ny][nx], eng.isNight, eng.unlockedDoors, nx, ny, false)) {
+              openCount++;
+            }
+          }
+        }
+        if (openCount >= 3) {
+          eng.touchVx = 0;
+          eng.touchVy = 0;
+          eng.statusBanner = 'INTERSECTION REACHED — SWIPE OR TAP';
+          eng.statusBannerTimer = 1.8;
+          callbacks.onHudNeedSync();
+        }
+      }
+    }
+  }
 
   const inputMag = Math.hypot(ix, iy);
   if (inputMag > 1) {
@@ -1342,7 +1485,6 @@ function updateGameplayStep(
     const dx = ix * moveSpeed * dt;
     const dy = iy * moveSpeed * dt;
 
-    // Separate X and Y collision resolution for smooth corner sliding in narrow corridors
     const nextX = p.x + dx;
     if (canPlayerOccupy(eng.maze.grid, nextX, p.y, p.radius, eng.isNight, eng.unlockedDoors)) {
       p.x = nextX;
